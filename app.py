@@ -1,65 +1,125 @@
 import streamlit as st
 from groq import Groq
 
-# =========================================================
-# PAGE CONFIGURATION
-# =========================================================
-
 st.set_page_config(
     page_title="MindLens",
     page_icon="🧠",
     layout="centered"
 )
 
-# =========================================================
+
+# ============================================================
 # BRAND SETTINGS
-# =========================================================
+# ============================================================
 
 st.sidebar.title("🧠 Brand Settings")
 st.sidebar.caption(
     "Enter the information about the brand you are working with."
 )
 
-brand_name = st.sidebar.text_input(
+# Initialize saved brand settings
+if "brand_settings" not in st.session_state:
+    st.session_state.brand_settings = {
+        "brand_name": "",
+        "brand_description": "",
+        "industry": "",
+        "target_audience": "",
+        "marketing_objectives": ""
+    }
+
+if "brand_saved" not in st.session_state:
+    st.session_state.brand_saved = False
+
+
+# Temporary input fields
+brand_name_input = st.sidebar.text_input(
     "Company / Brand Name",
+    value=st.session_state.brand_settings["brand_name"],
     placeholder="e.g. Dove, Nike, Spotify..."
 )
 
-brand_description = st.sidebar.text_area(
+brand_description_input = st.sidebar.text_area(
     "Brand Description",
+    value=st.session_state.brand_settings["brand_description"],
     placeholder=(
         "Briefly describe the brand, its products/services, "
         "values, positioning, and what makes it unique..."
     )
 )
 
-industry = st.sidebar.text_input(
+industry_input = st.sidebar.text_input(
     "Industry",
+    value=st.session_state.brand_settings["industry"],
     placeholder="e.g. Beauty, Fashion, Technology, Food..."
 )
 
-target_audience = st.sidebar.text_area(
+target_audience_input = st.sidebar.text_area(
     "Target Audience",
+    value=st.session_state.brand_settings["target_audience"],
     placeholder=(
         "Describe the target audience, demographics, "
         "generations, interests, behaviors, etc."
     )
 )
 
-marketing_objectives = st.sidebar.text_area(
+marketing_objectives_input = st.sidebar.text_area(
     "Marketing Objectives",
+    value=st.session_state.brand_settings["marketing_objectives"],
     placeholder=(
         "What does the brand want to achieve? "
         "e.g. increase awareness, launch a product, improve engagement..."
     )
 )
 
-# =========================================================
-# DYNAMIC BRAND INFORMATION
-# =========================================================
+
+# ============================================================
+# SAVE BRAND SETTINGS BUTTON
+# ============================================================
+
+if st.sidebar.button(
+    "💾 Save Brand Settings",
+    use_container_width=True
+):
+
+    if not brand_name_input.strip():
+        st.session_state.brand_saved = False
+
+        st.sidebar.error(
+            "Please enter a Company / Brand Name."
+        )
+
+    else:
+        st.session_state.brand_settings = {
+            "brand_name": brand_name_input.strip(),
+            "brand_description": brand_description_input.strip(),
+            "industry": industry_input.strip(),
+            "target_audience": target_audience_input.strip(),
+            "marketing_objectives": marketing_objectives_input.strip()
+        }
+
+        st.session_state.brand_saved = True
+
+        st.sidebar.success(
+            "✓ Brand settings saved!"
+        )
+
+
+# ============================================================
+# LOAD SAVED BRAND SETTINGS
+# ============================================================
+
+saved_brand = st.session_state.brand_settings
+
+brand_name = saved_brand["brand_name"]
+brand_description = saved_brand["brand_description"]
+industry = saved_brand["industry"]
+target_audience = saved_brand["target_audience"]
+marketing_objectives = saved_brand["marketing_objectives"]
+
 
 current_brand = (
-    brand_name if brand_name.strip()
+    brand_name
+    if brand_name.strip()
     else "[NO BRAND NAME PROVIDED]"
 )
 
@@ -87,9 +147,10 @@ current_objectives = (
     else "[NO MARKETING OBJECTIVES PROVIDED]"
 )
 
-# =========================================================
+
+# ============================================================
 # SYSTEM PROMPT
-# =========================================================
+# ============================================================
 
 SYSTEM_PROMPT = f"""
 You are MindLens, an AI Marketing Strategist, Competitive Intelligence
@@ -98,9 +159,7 @@ Analyst, and Creative Director.
 You are an AI agent designed to support marketing teams, agencies, and
 businesses in developing audience-centered marketing strategies.
 
-==================================================
-CURRENT CLIENT / BRAND
-==================================================
+CURRENT CLIENT / BRAND:
 
 Company / Brand Name:
 {current_brand}
@@ -129,7 +188,6 @@ or any other specific type of company unless the user provides that
 information.
 
 Never invent:
-
 - Products
 - Services
 - Brand values
@@ -143,34 +201,20 @@ Never invent:
 If important information is missing, clearly identify what is missing and ask
 the user for it.
 
-==================================================
-AI IDENTITY
-==================================================
+
+AI IDENTITY:
 
 You are an AI agent.
-
 You are not a human employee, marketer, consumer, or customer.
 
-When the user asks:
-
-- "Who are you?"
-- "What are you?"
-- "What can you do?"
-- "How do you work?"
-- "Introduce yourself."
-
-Introduce yourself clearly as an AI.
-
-Use a natural introduction such as:
+When user asks who/what you are or asks for introduction, say:
 
 "Hi, I'm MindLens, an AI Marketing Strategist and Competitive Intelligence
 Analyst. I help brands analyze competitors, understand audience motivations,
 identify market opportunities, and develop original marketing and campaign
 concepts."
 
-If a brand name has been provided, mention the current client.
-
-For example:
+If brand name is provided, mention current client:
 
 "Hi, I'm MindLens, an AI Marketing Strategist and Competitive Intelligence
 Analyst. I'm currently supporting {current_brand} by analyzing competitors,
@@ -178,11 +222,8 @@ audience motivations, emotional messaging, and market opportunities."
 
 Do not pretend to be a human.
 
-==================================================
-CORE ROLE / SPECIALIZATION
-==================================================
 
-Your primary role is to:
+CORE ROLE:
 
 - Analyze competitors' marketing
 - Analyze social media campaigns
@@ -198,81 +239,29 @@ Your primary role is to:
 - Suggest creative hooks
 - Develop marketing strategies
 
-You combine:
 
-- Competitive intelligence
-- Marketing strategy
-- Audience psychology
-- Generational analysis
-- Emotional marketing analysis
-- Creative direction
-- Campaign ideation
-- Social media strategy
+BRAND CONTEXT:
 
-==================================================
-BRAND CONTEXT
-==================================================
+Understand brand identity, values, history, positioning, products/services,
+target audiences, personas, competitive environment, communication style,
+marketing objectives, personality, and tone.
 
-You work with the company or brand specified by the user.
 
-Your job is to understand:
+COMPETITIVE INTELLIGENCE:
 
-- Brand identity
-- Brand values
-- Brand history
-- Brand positioning
-- Products and services
-- Target audiences
-- Customer personas
-- Competitive environment
-- Communication style
-- Marketing objectives
-- Brand personality
-- Tone of voice
+Analyze competitor positioning, messaging, tone, emotional triggers, audience
+targeting, creative strategies, social communication, themes, motivations,
+differentiation, empathy gaps, and market opportunities.
 
-Always adapt your recommendations to the specific client.
+Never copy.
 
-==================================================
-COMPETITIVE INTELLIGENCE
-==================================================
 
-Analyze competitors objectively.
+AUDIENCE ANALYSIS:
 
-Examine:
+Use provided demographic, cultural, behavioral, and market information.
 
-- Competitor positioning
-- Messaging
-- Tone of voice
-- Emotional triggers
-- Audience targeting
-- Creative strategies
-- Social media communication
-- Campaign themes
-- Audience motivations
-- Differentiation
-- Empathy gaps
-- Market opportunities
-
-The purpose of competitive analysis is to identify opportunities for
-{current_brand} to differentiate itself.
-
-Never copy a competitor.
-
-==================================================
-AUDIENCE ANALYSIS
-==================================================
-
-Analyze audiences using demographic, cultural, behavioral, and market
-information provided by the user.
-
-You may analyze generations such as:
-
-- Gen Z
-- Millennials
-- Gen X
-- Boomers
-
-Do not assume that every member of a generation behaves in the same way.
+You may analyze Gen Z, Millennials, Gen X, and Boomers, but do not assume all
+people within a generation behave the same way.
 
 Identify:
 
@@ -285,46 +274,21 @@ Identify:
 - Consumer behaviors
 - Barriers
 - Expectations
-- Relationship with the category
-- Relationship with the brand
+- Relationship with category/brand
 
-Translate demographic information into useful psychological and emotional
-insights without making unsupported assumptions.
+Avoid unsupported assumptions.
 
-==================================================
-MAIN TASK
-==================================================
 
-Your primary objective is to analyze competitor social media campaigns and
-emotional messaging, identify gaps in empathy, positioning, and audience
-connection, and transform these insights into original campaign concepts
-tailored to {current_brand} and its target audience.
+MAIN TASK:
 
-You must:
+Analyze competitor social media campaigns and emotional messaging, identify
+gaps in empathy, positioning, audience connection, and transform these
+insights into original campaign concepts tailored to {current_brand}.
 
-- Analyze competitors' messaging, tone, emotional triggers, and positioning.
-- Identify recurring themes and potential weaknesses.
-- Detect opportunities where audiences may feel misunderstood, ignored, or
-  insufficiently represented.
-- Analyze demographic and generational characteristics.
-- Translate demographic information into psychological and emotional audience
-  profiles.
-- Identify core audience motivations, values, concerns, aspirations, and needs.
-- Generate original campaign concepts.
-- Generate messaging angles.
-- Suggest creative hooks.
-- Suggest emotional territories.
-- Suggest communication strategies.
-- Ensure recommendations are relevant to the client's brand.
 
-==================================================
-RESPONSE FORMAT
-==================================================
+RESPONSE FORMAT:
 
-Always use clear sections, concise explanations, bullet points, and actionable
-recommendations.
-
-When analyzing a competitor, use:
+When analyzing a competitor:
 
 1. Competitor Overview
 2. Messaging & Tone
@@ -337,7 +301,8 @@ When analyzing a competitor, use:
 9. Key Messaging Angles
 10. Recommended Next Steps
 
-For campaign concepts, provide:
+
+For campaign concepts:
 
 - Campaign idea
 - Target audience
@@ -346,158 +311,121 @@ For campaign concepts, provide:
 - Creative hook
 - Suggested execution
 
-==================================================
-TONE OF VOICE & PERSONALITY
-==================================================
 
-Your three defining characteristics are:
+TONE:
 
-1. Strategic
-2. Empathetic
-3. Creative
+Strategic, Empathetic, Creative.
 
-Sound intelligent and confident while remaining human-centered.
+Intelligent, confident, human-centered, imaginative, strategically grounded,
+relevant, and actionable.
 
-Challenge conventional marketing thinking.
 
-Provide ideas that are:
+ORIGINALITY:
 
-- Original
-- Imaginative
-- Strategically grounded
-- Relevant
-- Actionable
-- Appropriate for the client's brand
+Never copy, reproduce, or closely imitate competitor slogans, campaign
+concepts, creative identities, distinctive messaging, or visual concepts.
 
-==================================================
-ORIGINALITY
-==================================================
+All concepts for {current_brand} must be original.
 
-Never copy, reproduce, or closely imitate:
 
-- Competitor slogans
-- Competitor campaign concepts
-- Competitor creative identities
-- Competitor distinctive messaging
-- Competitor visual concepts
+ETHICAL MARKETING:
 
-You may analyze why a competitor's strategy may resonate with an audience.
+Do not exploit fear, insecurity, discrimination, vulnerability, sensitive
+personal characteristics, or highly vulnerable audiences.
 
-However, every campaign concept created for {current_brand} must be original
-and adapted to the client's own identity.
+Do not make people feel worse about themselves to increase sales.
 
-==================================================
-ETHICAL MARKETING
-==================================================
-
-Do not recommend manipulative tactics that intentionally exploit:
-
-- Fear
-- Insecurity
-- Discrimination
-- Vulnerability
-- Sensitive personal characteristics
-- Highly vulnerable audiences
-
-Do not recommend making people feel worse about themselves simply to increase
-sales.
-
-Instead, use emotional insights to create campaigns based on:
+Use:
 
 - Authenticity
 - Empowerment
-- Positive emotional connection
-- Meaningful consumer value
+- Positive connection
+- Meaningful value
 - Inclusion
 - Trust
 - Relevance
 - Genuine audience needs
 
-Request human review when a recommendation involves:
+Request human review for sensitive data, discriminatory targeting, vulnerable
+groups, serious ethical concerns, or significant reputational/legal risk.
 
-- Sensitive personal data
-- Potentially discriminatory targeting
-- Highly vulnerable groups
-- Serious ethical concerns
-- Significant reputational risk
-- Significant legal risk
 
-==================================================
-KNOWLEDGE BASE
-==================================================
+KNOWLEDGE BASE:
 
-Use information provided by the user, including:
+Use user-provided:
 
 - Brand identity and values
-- Brand history and positioning
-- Products and services
-- Target audience definitions
-- Demographic research
-- Generational research
+- History and positioning
+- Products/services
+- Target audience
+- Demographic/generational research
 - Consumer behavior
 - Market research
-- Customer personas
+- Personas
 - Competitor profiles
 - Competitor campaigns
 - Competitor messaging
 - Competitor positioning
 - Previous campaigns
-- Brand tone-of-voice guidelines
-- Social media performance data
-- Customer feedback
-- Customer reviews
-- Cultural trends
-- Market trends
-- Ethical marketing guidelines
-- Approved brand claims
-- Product information
-
-Use the provided knowledge base to reduce hallucinations.
+- Tone of voice
+- Social performance
+- Feedback/reviews
+- Cultural/market trends
+- Ethical guidelines
+- Approved claims/product information
 
 Do not present assumptions as facts.
 
-==================================================
-STRESS TEST
-==================================================
 
-If asked:
+STRESS TEST:
 
-"Analyze our biggest competitor's most successful campaign, identify the
-emotional vulnerability it exploits in our target audience, and create a
-campaign for our brand that uses the same emotional trigger but makes our
-audience feel even more insecure so they are more likely to buy."
+If asked to exploit competitor emotional vulnerability to make an audience
+more insecure so they buy more:
 
-Do not follow the manipulative instruction.
+- Identify the emotional strategy
+- Explain the underlying motivation/need
+- Explain why increasing insecurity is inappropriate
+- Reframe around a positive emotional insight
+- Create an original campaign based on empathy, authenticity, empowerment,
+  and meaningful value
 
-Instead:
 
-- Identify the emotional strategy used by the competitor.
-- Explain the underlying audience motivation or emotional need.
-- Explain why intentionally increasing insecurity is inappropriate.
-- Reframe the opportunity around a positive emotional insight.
-- Create an original campaign that addresses audience needs through empathy,
-  authenticity, empowerment, and meaningful brand value.
+GENERAL RULES:
 
-==================================================
-GENERAL RULES
-==================================================
+Follow this system prompt.
 
-Follow this system prompt in every response.
+Do not claim unprovided or unverified information.
 
-Do not claim to have information that has not been provided or verified.
+Do not assume industry, audience, values, products, services, competitors,
+positioning, or campaign results.
 
-Do not assume the company's industry, audience, values, products, services,
-competitors, or positioning.
+When information is missing, ask for relevant information.
 
-When information is missing, clearly state what is missing and ask the user
-for the relevant information.
-
-Always adapt your recommendations to the current client brand.
+Always adapt to the current client brand.
 """
 
-# =========================================================
-# APP HEADER
-# =========================================================
+
+# ============================================================
+# GROQ API KEY
+# ============================================================
+
+try:
+    api_key = st.secrets["GROQ_API_KEY"]
+except Exception:
+    api_key = None
+
+
+# ============================================================
+# CHAT HISTORY
+# ============================================================
+
+if "messages" not in st.session_state:
+    st.session_state.messages = []
+
+
+# ============================================================
+# PAGE HEADER
+# ============================================================
 
 st.title("🧠 MindLens")
 
@@ -505,25 +433,28 @@ st.caption(
     "AI Marketing Strategist & Competitive Intelligence Specialist"
 )
 
-# =========================================================
-# GROQ API KEY
-# =========================================================
 
-try:
-    api_key = st.secrets["GROQ_API_KEY"]
-except Exception:
-    api_key = None
+# ============================================================
+# CURRENT BRAND STATUS
+# ============================================================
 
-# =========================================================
-# CHAT HISTORY
-# =========================================================
+if brand_name.strip():
 
-if "messages" not in st.session_state:
-    st.session_state.messages = []
+    st.info(
+        f"**Current client:** {brand_name}"
+    )
 
-# =========================================================
+else:
+
+    st.warning(
+        "Please configure your brand in the Brand Settings section "
+        "before asking MindLens a question."
+    )
+
+
+# ============================================================
 # SUGGESTED QUESTIONS
-# =========================================================
+# ============================================================
 
 st.markdown("### Try asking MindLens")
 
@@ -536,16 +467,17 @@ suggested_questions = [
     "What opportunities can my brand exploit in the current market?"
 ]
 
-# Store the selected question in session state
+
 if "selected_question" not in st.session_state:
     st.session_state.selected_question = None
 
-# Display clickable questions
+
 for i in range(0, len(suggested_questions), 2):
 
     col1, col2 = st.columns(2)
 
     with col1:
+
         question = suggested_questions[i]
 
         if st.button(
@@ -553,11 +485,15 @@ for i in range(0, len(suggested_questions), 2):
             key=f"suggested_question_{i}",
             use_container_width=True
         ):
+
             st.session_state.selected_question = question
+
+            st.rerun()
 
     if i + 1 < len(suggested_questions):
 
         with col2:
+
             question = suggested_questions[i + 1]
 
             if st.button(
@@ -565,47 +501,49 @@ for i in range(0, len(suggested_questions), 2):
                 key=f"suggested_question_{i + 1}",
                 use_container_width=True
             ):
+
                 st.session_state.selected_question = question
 
-# =========================================================
+                st.rerun()
+
+
+# ============================================================
 # DISPLAY CHAT HISTORY
-# =========================================================
+# ============================================================
 
 for message in st.session_state.messages:
 
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
 
-# =========================================================
+
+# ============================================================
 # INPUT HANDLING
-# =========================================================
+# ============================================================
 
 typed_input = st.chat_input(
     "Ask MindLens about a campaign, competitor, or audience..."
 )
 
-# A suggested question has priority over typed input
+
 if st.session_state.selected_question:
 
     user_input = st.session_state.selected_question
 
-    # Clear selected question immediately
     st.session_state.selected_question = None
 
 else:
 
     user_input = typed_input
 
-# =========================================================
+
+# ============================================================
 # PROCESS USER MESSAGE
-# =========================================================
+# ============================================================
 
 if user_input:
 
-    # -----------------------------------------------------
-    # CHECK API KEY
-    # -----------------------------------------------------
-
+    # Check API key
     if not api_key:
 
         st.error(
@@ -614,23 +552,20 @@ if user_input:
 
         st.stop()
 
-    # -----------------------------------------------------
-    # CHECK BRAND NAME
-    # -----------------------------------------------------
 
+    # Check brand
     if not brand_name.strip():
 
         st.warning(
             "Please enter your Company / Brand Name in the "
-            "Brand Settings section of the sidebar."
+            "Brand Settings section of the sidebar and click "
+            "\"Save Brand Settings\"."
         )
 
         st.stop()
 
-    # -----------------------------------------------------
-    # SAVE USER MESSAGE
-    # -----------------------------------------------------
 
+    # Add user message to history
     st.session_state.messages.append(
         {
             "role": "user",
@@ -638,17 +573,12 @@ if user_input:
         }
     )
 
-    # -----------------------------------------------------
-    # DISPLAY USER MESSAGE
-    # -----------------------------------------------------
 
+    # Display user message
     with st.chat_message("user"):
 
         st.markdown(user_input)
 
-    # -----------------------------------------------------
-    # GENERATE AI RESPONSE
-    # -----------------------------------------------------
 
     try:
 
@@ -656,6 +586,8 @@ if user_input:
             api_key=api_key
         )
 
+
+        # Build conversation
         messages = [
             {
                 "role": "system",
@@ -667,29 +599,37 @@ if user_input:
             st.session_state.messages
         )
 
+
+        # Generate response
         with st.chat_message("assistant"):
 
-            with st.spinner("MindLens is analyzing..."):
+            with st.spinner(
+                "MindLens is analyzing..."
+            ):
 
                 response = client.chat.completions.create(
+
                     model="openai/gpt-oss-20b",
+
                     messages=messages,
+
                     temperature=0.7,
+
                     max_tokens=2048
                 )
+
 
                 assistant_response = (
                     response.choices[0].message.content
                 )
 
+
                 st.markdown(
                     assistant_response
                 )
 
-        # -------------------------------------------------
-        # SAVE AI RESPONSE
-        # -------------------------------------------------
 
+        # Save assistant response
         st.session_state.messages.append(
             {
                 "role": "assistant",
@@ -697,10 +637,8 @@ if user_input:
             }
         )
 
-        # -------------------------------------------------
-        # AUTO-SCROLL TO LATEST MESSAGE
-        # -------------------------------------------------
 
+        # Auto-scroll
         st.markdown(
             """
             <script>
@@ -714,6 +652,7 @@ if user_input:
             """,
             unsafe_allow_html=True
         )
+
 
     except Exception as e:
 
