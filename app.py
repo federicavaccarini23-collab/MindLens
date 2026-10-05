@@ -1,5 +1,12 @@
 import streamlit as st
 from groq import Groq
+import json
+import os
+
+
+# ============================================================
+# PAGE CONFIG
+# ============================================================
 
 st.set_page_config(
     page_title="MindLens",
@@ -9,25 +16,147 @@ st.set_page_config(
 
 
 # ============================================================
-# BRAND SETTINGS
+# PERSISTENT BRAND STORAGE
+# ============================================================
+
+BRAND_FILE = "mindlens_brand.json"
+
+
+DEFAULT_BRAND = {
+    "brand_name": "",
+    "brand_description": "",
+    "industry": "",
+    "target_audience": "",
+    "marketing_objectives": ""
+}
+
+
+def load_brand_settings():
+    """
+    Load the saved brand from persistent storage.
+    """
+
+    if os.path.exists(BRAND_FILE):
+
+        try:
+
+            with open(
+                BRAND_FILE,
+                "r",
+                encoding="utf-8"
+            ) as file:
+
+                data = json.load(file)
+
+                if isinstance(data, dict):
+
+                    return {
+                        "brand_name": data.get(
+                            "brand_name",
+                            ""
+                        ),
+                        "brand_description": data.get(
+                            "brand_description",
+                            ""
+                        ),
+                        "industry": data.get(
+                            "industry",
+                            ""
+                        ),
+                        "target_audience": data.get(
+                            "target_audience",
+                            ""
+                        ),
+                        "marketing_objectives": data.get(
+                            "marketing_objectives",
+                            ""
+                        )
+                    }
+
+        except Exception:
+            pass
+
+    return DEFAULT_BRAND.copy()
+
+
+def save_brand_settings(brand_data):
+    """
+    Save the brand permanently.
+    """
+
+    with open(
+        BRAND_FILE,
+        "w",
+        encoding="utf-8"
+    ) as file:
+
+        json.dump(
+            brand_data,
+            file,
+            ensure_ascii=False,
+            indent=4
+        )
+
+
+def clear_brand_settings():
+    """
+    Delete the saved brand.
+    """
+
+    if os.path.exists(BRAND_FILE):
+
+        os.remove(BRAND_FILE)
+
+
+# ============================================================
+# INITIALIZE SESSION STATE
+# ============================================================
+
+if "brand_settings" not in st.session_state:
+
+    st.session_state.brand_settings = (
+        load_brand_settings()
+    )
+
+
+if "brand_saved" not in st.session_state:
+
+    st.session_state.brand_saved = bool(
+        st.session_state.brand_settings["brand_name"].strip()
+    )
+
+
+if "messages" not in st.session_state:
+
+    st.session_state.messages = []
+
+
+if "pending_question" not in st.session_state:
+
+    st.session_state.pending_question = None
+
+
+# ============================================================
+# SIDEBAR
 # ============================================================
 
 st.sidebar.title("🧠 Brand Settings")
+
 st.sidebar.caption(
-    "Enter the information about the brand you are working with."
+    "Configure your client once. MindLens will remember "
+    "the information until you change or delete it."
 )
 
-if "brand_settings" not in st.session_state:
-    st.session_state.brand_settings = {
-        "brand_name": "",
-        "brand_description": "",
-        "industry": "",
-        "target_audience": "",
-        "marketing_objectives": ""
-    }
 
-if "brand_saved" not in st.session_state:
-    st.session_state.brand_saved = False
+# ============================================================
+# SAVED BRAND STATUS
+# ============================================================
+
+if st.session_state.brand_saved:
+
+    st.sidebar.success(
+        "✓ Brand saved"
+    )
 
 
 # ============================================================
@@ -40,6 +169,7 @@ brand_name_input = st.sidebar.text_input(
     placeholder="e.g. Dove, Nike, Spotify..."
 )
 
+
 brand_description_input = st.sidebar.text_area(
     "Brand Description",
     value=st.session_state.brand_settings["brand_description"],
@@ -49,11 +179,13 @@ brand_description_input = st.sidebar.text_area(
     )
 )
 
+
 industry_input = st.sidebar.text_input(
     "Industry",
     value=st.session_state.brand_settings["industry"],
     placeholder="e.g. Beauty, Fashion, Technology, Food..."
 )
+
 
 target_audience_input = st.sidebar.text_area(
     "Target Audience",
@@ -63,6 +195,7 @@ target_audience_input = st.sidebar.text_area(
         "generations, interests, behaviors, etc."
     )
 )
+
 
 marketing_objectives_input = st.sidebar.text_area(
     "Marketing Objectives",
@@ -85,40 +218,109 @@ if st.sidebar.button(
 
     if not brand_name_input.strip():
 
-        st.session_state.brand_saved = False
-
         st.sidebar.error(
             "Please enter a Company / Brand Name."
         )
 
     else:
 
-        st.session_state.brand_settings = {
+        new_brand_settings = {
+
             "brand_name": brand_name_input.strip(),
-            "brand_description": brand_description_input.strip(),
-            "industry": industry_input.strip(),
-            "target_audience": target_audience_input.strip(),
-            "marketing_objectives": marketing_objectives_input.strip()
+
+            "brand_description": (
+                brand_description_input.strip()
+            ),
+
+            "industry": (
+                industry_input.strip()
+            ),
+
+            "target_audience": (
+                target_audience_input.strip()
+            ),
+
+            "marketing_objectives": (
+                marketing_objectives_input.strip()
+            )
         }
 
-        st.session_state.brand_saved = True
 
-        st.sidebar.success(
-            "✓ Brand settings saved!"
+        # Save permanently
+        save_brand_settings(
+            new_brand_settings
         )
 
 
+        # Update session state
+        st.session_state.brand_settings = (
+            new_brand_settings
+        )
+
+        st.session_state.brand_saved = True
+
+
+        st.sidebar.success(
+            "✓ Brand settings saved permanently."
+        )
+
+
+        # Rebuild the app using the saved profile
+        st.rerun()
+
+
 # ============================================================
-# LOAD SAVED BRAND
+# CLEAR / LOGOUT
+# ============================================================
+
+st.sidebar.markdown("---")
+
+if st.sidebar.button(
+    "🗑️ Clear Saved Brand",
+    use_container_width=True
+):
+
+    clear_brand_settings()
+
+    st.session_state.brand_settings = (
+        DEFAULT_BRAND.copy()
+    )
+
+    st.session_state.brand_saved = False
+
+    st.session_state.messages = []
+
+    st.session_state.pending_question = None
+
+    st.sidebar.success(
+        "Saved brand removed."
+    )
+
+    st.rerun()
+
+
+# ============================================================
+# LOAD CURRENT BRAND
 # ============================================================
 
 saved_brand = st.session_state.brand_settings
 
+
 brand_name = saved_brand["brand_name"]
-brand_description = saved_brand["brand_description"]
+
+brand_description = (
+    saved_brand["brand_description"]
+)
+
 industry = saved_brand["industry"]
-target_audience = saved_brand["target_audience"]
-marketing_objectives = saved_brand["marketing_objectives"]
+
+target_audience = (
+    saved_brand["target_audience"]
+)
+
+marketing_objectives = (
+    saved_brand["marketing_objectives"]
+)
 
 
 current_brand = (
@@ -127,11 +329,13 @@ current_brand = (
     else "[NO BRAND NAME PROVIDED]"
 )
 
+
 current_description = (
     brand_description
     if brand_description.strip()
     else "[NO BRAND DESCRIPTION PROVIDED]"
 )
+
 
 current_industry = (
     industry
@@ -139,11 +343,13 @@ current_industry = (
     else "[NO INDUSTRY PROVIDED]"
 )
 
+
 current_audience = (
     target_audience
     if target_audience.strip()
     else "[NO TARGET AUDIENCE PROVIDED]"
 )
+
 
 current_objectives = (
     marketing_objectives
@@ -192,6 +398,7 @@ or any other specific type of company unless the user provides that
 information.
 
 Never invent:
+
 - Products
 - Services
 - Brand values
@@ -219,7 +426,7 @@ Analyst. I help brands analyze competitors, understand audience motivations,
 identify market opportunities, and develop original marketing and campaign
 concepts."
 
-If brand name is provided, mention current client:
+If brand name is provided, mention the current client:
 
 "Hi, I'm MindLens, an AI Marketing Strategist and Competitive Intelligence
 Analyst. I'm currently supporting {current_brand} by analyzing competitors,
@@ -411,24 +618,16 @@ Always adapt to the current client brand.
 
 
 # ============================================================
-# GROQ API KEY
+# GROQ API
 # ============================================================
 
 try:
+
     api_key = st.secrets["GROQ_API_KEY"]
+
 except Exception:
+
     api_key = None
-
-
-# ============================================================
-# SESSION STATE
-# ============================================================
-
-if "messages" not in st.session_state:
-    st.session_state.messages = []
-
-if "pending_question" not in st.session_state:
-    st.session_state.pending_question = None
 
 
 # ============================================================
@@ -448,15 +647,15 @@ st.caption(
 
 if brand_name.strip():
 
-    st.info(
-        f"**Current client:** {brand_name}"
+    st.success(
+        f"**Active client:** {brand_name}"
     )
 
 else:
 
     st.warning(
-        "Please configure your brand in the Brand Settings section "
-        "before asking MindLens a question."
+        "No brand has been configured yet. "
+        "Please complete Brand Settings in the sidebar."
     )
 
 
@@ -466,7 +665,9 @@ else:
 
 for message in st.session_state.messages:
 
-    with st.chat_message(message["role"]):
+    with st.chat_message(
+        message["role"]
+    ):
 
         st.markdown(
             message["content"]
@@ -474,53 +675,40 @@ for message in st.session_state.messages:
 
 
 # ============================================================
-# PROCESS SUGGESTED QUESTION
-# ============================================================
-
-if st.session_state.pending_question:
-
-    user_input = st.session_state.pending_question
-
-    st.session_state.pending_question = None
-
-else:
-
-    user_input = None
-
-
-# ============================================================
 # SUGGESTED QUESTIONS
-# ============================================================
-#
-# IMPORTANT:
-# These are deliberately placed AFTER the conversation and
-# immediately BEFORE the request bar.
-#
-# This means the user does not have to scroll back to the top
-# of the conversation to access them.
 # ============================================================
 
 st.markdown("---")
 
-st.markdown("**💡 Suggested questions**")
+st.markdown(
+    "**💡 Suggested questions**"
+)
 
 
 suggested_questions = [
+
     "Analyze my main competitor's marketing strategy.",
+
     "Identify the emotional needs of my target audience.",
+
     "Find empathy gaps in my competitor's communication.",
+
     "Create 3 original campaign concepts for my brand.",
+
     "Develop a psychological profile of my target audience.",
+
     "What opportunities can my brand exploit in the current market?"
 ]
 
 
-# Use two columns to keep the suggestions compact
-# and close to the input area.
-
-for i in range(0, len(suggested_questions), 2):
+for i in range(
+    0,
+    len(suggested_questions),
+    2
+):
 
     col1, col2 = st.columns(2)
+
 
     with col1:
 
@@ -528,11 +716,13 @@ for i in range(0, len(suggested_questions), 2):
 
         if st.button(
             question,
-            key=f"suggested_question_{i}",
+            key=f"suggested_{i}",
             use_container_width=True
         ):
 
-            st.session_state.pending_question = question
+            st.session_state.pending_question = (
+                question
+            )
 
             st.rerun()
 
@@ -545,37 +735,44 @@ for i in range(0, len(suggested_questions), 2):
 
             if st.button(
                 question,
-                key=f"suggested_question_{i + 1}",
+                key=f"suggested_{i + 1}",
                 use_container_width=True
             ):
 
-                st.session_state.pending_question = question
+                st.session_state.pending_question = (
+                    question
+                )
 
                 st.rerun()
 
 
 # ============================================================
-# REQUEST BAR
+# INPUT
 # ============================================================
 
-typed_input = st.chat_input(
-    "Ask MindLens about a campaign, competitor, or audience..."
-)
+if st.session_state.pending_question:
 
+    user_input = (
+        st.session_state.pending_question
+    )
 
-if typed_input:
+    st.session_state.pending_question = None
 
-    user_input = typed_input
+else:
+
+    user_input = st.chat_input(
+        "Ask MindLens about a campaign, competitor, or audience..."
+    )
 
 
 # ============================================================
-# PROCESS USER INPUT
+# PROCESS MESSAGE
 # ============================================================
 
 if user_input:
 
     # --------------------------------------------------------
-    # API KEY CHECK
+    # API KEY
     # --------------------------------------------------------
 
     if not api_key:
@@ -588,21 +785,20 @@ if user_input:
 
 
     # --------------------------------------------------------
-    # BRAND CHECK
+    # BRAND
     # --------------------------------------------------------
 
     if not brand_name.strip():
 
         st.warning(
-            "Please enter your Company / Brand Name in "
-            "Brand Settings and click Save Brand Settings."
+            "Please configure your brand first."
         )
 
         st.stop()
 
 
     # --------------------------------------------------------
-    # ADD USER MESSAGE
+    # USER MESSAGE
     # --------------------------------------------------------
 
     st.session_state.messages.append(
@@ -614,7 +810,7 @@ if user_input:
 
 
     # --------------------------------------------------------
-    # GENERATE RESPONSE
+    # GROQ
     # --------------------------------------------------------
 
     try:
@@ -637,10 +833,6 @@ if user_input:
         )
 
 
-        # ----------------------------------------------------
-        # AI RESPONSE
-        # ----------------------------------------------------
-
         with st.chat_message("assistant"):
 
             with st.spinner(
@@ -660,7 +852,10 @@ if user_input:
 
 
                 assistant_response = (
-                    response.choices[0].message.content
+                    response
+                    .choices[0]
+                    .message
+                    .content
                 )
 
 
@@ -682,14 +877,7 @@ if user_input:
 
 
         # ----------------------------------------------------
-        # RERENDER
-        # ----------------------------------------------------
-        #
-        # The whole page is rebuilt with the latest message
-        # already stored in the conversation.
-        #
-        # The suggested questions remain below the conversation,
-        # close to the request bar.
+        # REBUILD PAGE
         # ----------------------------------------------------
 
         st.rerun()
