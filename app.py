@@ -17,7 +17,7 @@ st.sidebar.caption(
     "Enter the information about the brand you are working with."
 )
 
-# Initialize saved brand settings
+
 if "brand_settings" not in st.session_state:
     st.session_state.brand_settings = {
         "brand_name": "",
@@ -27,16 +27,21 @@ if "brand_settings" not in st.session_state:
         "marketing_objectives": ""
     }
 
+
 if "brand_saved" not in st.session_state:
     st.session_state.brand_saved = False
 
 
-# Temporary input fields
+# ============================================================
+# BRAND INPUT FIELDS
+# ============================================================
+
 brand_name_input = st.sidebar.text_input(
     "Company / Brand Name",
     value=st.session_state.brand_settings["brand_name"],
     placeholder="e.g. Dove, Nike, Spotify..."
 )
+
 
 brand_description_input = st.sidebar.text_area(
     "Brand Description",
@@ -47,11 +52,13 @@ brand_description_input = st.sidebar.text_area(
     )
 )
 
+
 industry_input = st.sidebar.text_input(
     "Industry",
     value=st.session_state.brand_settings["industry"],
     placeholder="e.g. Beauty, Fashion, Technology, Food..."
 )
+
 
 target_audience_input = st.sidebar.text_area(
     "Target Audience",
@@ -61,6 +68,7 @@ target_audience_input = st.sidebar.text_area(
         "generations, interests, behaviors, etc."
     )
 )
+
 
 marketing_objectives_input = st.sidebar.text_area(
     "Marketing Objectives",
@@ -73,7 +81,7 @@ marketing_objectives_input = st.sidebar.text_area(
 
 
 # ============================================================
-# SAVE BRAND SETTINGS BUTTON
+# SAVE BRAND SETTINGS
 # ============================================================
 
 if st.sidebar.button(
@@ -82,6 +90,7 @@ if st.sidebar.button(
 ):
 
     if not brand_name_input.strip():
+
         st.session_state.brand_saved = False
 
         st.sidebar.error(
@@ -89,6 +98,7 @@ if st.sidebar.button(
         )
 
     else:
+
         st.session_state.brand_settings = {
             "brand_name": brand_name_input.strip(),
             "brand_description": brand_description_input.strip(),
@@ -123,11 +133,13 @@ current_brand = (
     else "[NO BRAND NAME PROVIDED]"
 )
 
+
 current_description = (
     brand_description
     if brand_description.strip()
     else "[NO BRAND DESCRIPTION PROVIDED]"
 )
+
 
 current_industry = (
     industry
@@ -135,11 +147,13 @@ current_industry = (
     else "[NO INDUSTRY PROVIDED]"
 )
 
+
 current_audience = (
     target_audience
     if target_audience.strip()
     else "[NO TARGET AUDIENCE PROVIDED]"
 )
+
 
 current_objectives = (
     marketing_objectives
@@ -424,6 +438,14 @@ if "messages" not in st.session_state:
 
 
 # ============================================================
+# SUGGESTED QUESTION STATE
+# ============================================================
+
+if "selected_question" not in st.session_state:
+    st.session_state.selected_question = None
+
+
+# ============================================================
 # PAGE HEADER
 # ============================================================
 
@@ -458,6 +480,7 @@ else:
 
 st.markdown("### Try asking MindLens")
 
+
 suggested_questions = [
     "Analyze my main competitor's marketing strategy.",
     "Identify the emotional needs of my target audience.",
@@ -466,10 +489,6 @@ suggested_questions = [
     "Develop a psychological profile of my target audience.",
     "What opportunities can my brand exploit in the current market?"
 ]
-
-
-if "selected_question" not in st.session_state:
-    st.session_state.selected_question = None
 
 
 for i in range(0, len(suggested_questions), 2):
@@ -489,6 +508,7 @@ for i in range(0, len(suggested_questions), 2):
             st.session_state.selected_question = question
 
             st.rerun()
+
 
     if i + 1 < len(suggested_questions):
 
@@ -514,7 +534,10 @@ for i in range(0, len(suggested_questions), 2):
 for message in st.session_state.messages:
 
     with st.chat_message(message["role"]):
-        st.markdown(message["content"])
+
+        st.markdown(
+            message["content"]
+        )
 
 
 # ============================================================
@@ -543,7 +566,10 @@ else:
 
 if user_input:
 
-    # Check API key
+    # --------------------------------------------------------
+    # API KEY CHECK
+    # --------------------------------------------------------
+
     if not api_key:
 
         st.error(
@@ -553,7 +579,10 @@ if user_input:
         st.stop()
 
 
-    # Check brand
+    # --------------------------------------------------------
+    # BRAND CHECK
+    # --------------------------------------------------------
+
     if not brand_name.strip():
 
         st.warning(
@@ -565,7 +594,10 @@ if user_input:
         st.stop()
 
 
-    # Add user message to history
+    # --------------------------------------------------------
+    # SAVE USER MESSAGE
+    # --------------------------------------------------------
+
     st.session_state.messages.append(
         {
             "role": "user",
@@ -574,11 +606,18 @@ if user_input:
     )
 
 
-    # Display user message
+    # --------------------------------------------------------
+    # DISPLAY USER MESSAGE
+    # --------------------------------------------------------
+
     with st.chat_message("user"):
 
         st.markdown(user_input)
 
+
+    # --------------------------------------------------------
+    # GENERATE AI RESPONSE
+    # --------------------------------------------------------
 
     try:
 
@@ -587,7 +626,6 @@ if user_input:
         )
 
 
-        # Build conversation
         messages = [
             {
                 "role": "system",
@@ -595,12 +633,12 @@ if user_input:
             }
         ]
 
+
         messages.extend(
             st.session_state.messages
         )
 
 
-        # Generate response
         with st.chat_message("assistant"):
 
             with st.spinner(
@@ -629,7 +667,10 @@ if user_input:
                 )
 
 
-        # Save assistant response
+        # ----------------------------------------------------
+        # SAVE ASSISTANT RESPONSE
+        # ----------------------------------------------------
+
         st.session_state.messages.append(
             {
                 "role": "assistant",
@@ -638,16 +679,75 @@ if user_input:
         )
 
 
-        # Auto-scroll
+        # ----------------------------------------------------
+        # AUTOSCROLL
+        # ----------------------------------------------------
+        #
+        # The timeout sequence gives Streamlit enough time to
+        # finish rendering the newly generated assistant
+        # message before scrolling.
+        #
+        # Multiple attempts make the behavior more reliable
+        # after clicking a suggested question.
+        # ----------------------------------------------------
+
         st.markdown(
             """
             <script>
-                window.parent.document.querySelector(
-                    'section.main'
-                ).scrollTo({
-                    top: document.body.scrollHeight,
-                    behavior: 'smooth'
-                });
+
+            function mindLensScrollToBottom() {
+
+                try {
+
+                    const main = window.parent.document.querySelector(
+                        'section.main'
+                    );
+
+                    if (main) {
+
+                        main.scrollTo({
+                            top: main.scrollHeight,
+                            behavior: 'smooth'
+                        });
+
+                    }
+
+                    window.parent.scrollTo({
+                        top: window.parent.document.body.scrollHeight,
+                        behavior: 'smooth'
+                    });
+
+                } catch (error) {
+
+                    console.log(
+                        "MindLens autoscroll:",
+                        error
+                    );
+
+                }
+            }
+
+
+            // First attempt
+            setTimeout(
+                mindLensScrollToBottom,
+                100
+            );
+
+
+            // Second attempt after rendering
+            setTimeout(
+                mindLensScrollToBottom,
+                400
+            );
+
+
+            // Final attempt
+            setTimeout(
+                mindLensScrollToBottom,
+                900
+            );
+
             </script>
             """,
             unsafe_allow_html=True
